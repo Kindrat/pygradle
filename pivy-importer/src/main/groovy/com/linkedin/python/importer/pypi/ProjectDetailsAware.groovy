@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2016 LinkedIn Corp.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,23 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.linkedin.python.importer.pypi.cache
+package com.linkedin.python.importer.pypi
 
-import com.linkedin.python.importer.PypiClient
+interface ProjectDetailsAware {
+    List<VersionEntry> findVersion(String version)
 
-/**
- * Utility to createDownloader Pypi cache objects depending on application configuration
- */
-class ApiCaches {
-    static ApiCache create(boolean lenient, boolean allowPreReleases) {
-        PypiClient client = new PypiClient()
-        ApiCache cache = new PypiApiCache(client)
-        if (lenient) {
-            cache = new LenientPypiApiCacheDecorator(cache)
-        }
-        if (allowPreReleases) {
-            cache = new PreReleaseCacheDecorator(cache)
-        }
-        return cache
-    }
+    String maybeFixVersion(String version)
+
+    String getHighestVersionInRange(VersionRange range, List<String> excluded)
+
+    String getLowestVersionInRange(VersionRange range, List<String> excluded)
+
+    String getLatestVersion()
+
+    String getName()
+
+    boolean hasVersion(String version)
+
+    boolean satisfies(String release)
 }

@@ -26,8 +26,7 @@ class SourceDistPackage extends PythonPackage {
     @Override
     Map<String, List<String>> getDependencies(boolean latestVersions,
                                               boolean allowPreReleases,
-                                              boolean fetchExtras,
-                                              boolean lenient) {
+                                              boolean fetchExtras) {
 
         return parseRequiresText(getRequiresTextFile(), latestVersions, allowPreReleases, fetchExtras)
     }

@@ -20,7 +20,7 @@ import com.linkedin.python.importer.pypi.cache.ApiCache
 import groovy.util.logging.Slf4j
 
 @Slf4j
-abstract class DependencyDownloader {
+abstract class DependencyDownloader implements Downloader {
     Queue<String> dependencies = [] as Queue
     PypiClient pypiClient = new PypiClient()
     String project
@@ -44,26 +44,27 @@ abstract class DependencyDownloader {
         dependencies.add(project)
     }
 
-    def download(boolean latestVersions, boolean allowPreReleases, boolean fetchExtras, boolean lenient) {
+    @Override
+    void download(boolean latestVersions, boolean allowPreReleases, boolean fetchExtras) {
         while (!dependencies.isEmpty()) {
             def dependency = dependencies.poll()
             if (dependency in processedDependencies) {
                 continue
             }
-            downloadDependency(dependency, latestVersions, allowPreReleases, fetchExtras, lenient)
+            downloadDependency(dependency, latestVersions, allowPreReleases, fetchExtras)
             processedDependencies.add(dependency)
         }
     }
 
-    abstract downloadDependency(
-        String dep, boolean latestVersions, boolean allowPreReleases, boolean fetchExtras, boolean lenient)
+    @Override
+    abstract void downloadDependency(String dep, boolean latestVersions, boolean allowPreReleases, boolean fetchExtras)
 
-    /**
-     * Get the actual module name from artifact name, which has the correct letter case.
-     * @param filename the filename of artifact
-     * @param revision module version
-     * @return actual module name, which is from PyPI
-     */
+/**
+ * Get the actual module name from artifact name, which has the correct letter case.
+ * @param filename the filename of artifact
+ * @param revision module version
+ * @return actual module name, which is from PyPI
+ */
     static String getActualModuleNameFromFilename(String filename, String revision) {
         return filename.substring(0, filename.indexOf(revision) - 1)
     }

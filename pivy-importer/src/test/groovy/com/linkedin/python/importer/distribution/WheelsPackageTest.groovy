@@ -15,6 +15,7 @@
  */
 package com.linkedin.python.importer.distribution
 
+import com.linkedin.python.importer.PypiClient
 import com.linkedin.python.importer.deps.DependencySubstitution
 import com.linkedin.python.importer.pypi.cache.PypiApiCache
 import spock.lang.Specification
@@ -29,12 +30,14 @@ class WheelsPackageTest extends Specification {
         File testPackageFileDjango = new File(testDirectory, "Django-2.0.6-py3-none-any.whl")
         File testPackageFilePywin32 = new File(testDirectory, "pywin32-223-cp27-cp27m-win_amd64.whl")
         DependencySubstitution testDependencySubstitution = new DependencySubstitution([:], [:])
-        PypiApiCache testPypiApiCache = new PypiApiCache()
+        PypiClient client = new PypiClient()
+        PypiApiCache testPypiApiCache = new PypiApiCache(client)
 
         testWheelsPackageDjango = new WheelsPackage("Django", "2.0.6", testPackageFileDjango,
             testPypiApiCache, testDependencySubstitution)
 
-        testWheelsPackagePywin = new WheelsPackage("pywin32", "223", testPackageFilePywin32, testPypiApiCache, testDependencySubstitution)
+        testWheelsPackagePywin = new WheelsPackage("pywin32", "223", testPackageFilePywin32,
+            testPypiApiCache, testDependencySubstitution)
     }
 
     def "test getting runtime requires from metadata Json file for wheel package which has runtime dependencies"() {

@@ -54,6 +54,7 @@ licenseReport {
 }
 
 task integTest(type: Test) {
+    group 'verification'
     dependsOn(':pivy-importer:importRequiredDependencies')
     shouldRunAfter tasks.test
     setTestClassesDirs sourceSets.integTest.output.classesDirs

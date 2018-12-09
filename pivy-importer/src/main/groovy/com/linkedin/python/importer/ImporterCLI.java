@@ -19,8 +19,6 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import com.linkedin.python.importer.deps.DependencyDownloader;
 import com.linkedin.python.importer.deps.DependencySubstitution;
-import com.linkedin.python.importer.deps.SdistDownloader;
-import com.linkedin.python.importer.deps.WheelsDownloader;
 import com.linkedin.python.importer.pypi.cache.ApiCache;
 import com.linkedin.python.importer.pypi.cache.ApiCaches;
 import org.apache.commons.cli.CommandLine;
@@ -35,6 +33,8 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+
+import static com.linkedin.python.importer.deps.DependencyDownloaders.createDownloader;
 
 public class ImporterCLI {
 
@@ -81,46 +81,31 @@ public class ImporterCLI {
                                                       DependencyDownloader artifactDownloader,
                                                       boolean latestVersions,
                                                       boolean allowPreReleases,
-                                                      boolean fetchExtras,
-                                                      boolean lenient) {
+                                                      boolean fetchExtras) {
 
         artifactDownloader.getProcessedDependencies().addAll(processedDependencies);
-        artifactDownloader.download(latestVersions, allowPreReleases, fetchExtras, lenient);
+        artifactDownloader.download(latestVersions, allowPreReleases, fetchExtras);
         processedDependencies.addAll(artifactDownloader.getProcessedDependencies());
     }
 
     private static void importPackages(CommandLine line, File repoPath) {
-        final DependencySubstitution replacements = new DependencySubstitution(buildSubstitutionMap(line),
+        DependencySubstitution replacements = new DependencySubstitution(buildSubstitutionMap(line),
             buildForceMap(line));
         Set<String> processedDependencies = new HashSet<>();
-        ApiCache cache = ApiCaches.create(line.hasOption("lenient"));
+
+        boolean lenient = line.hasOption("lenient");
+        boolean allowPreReleases = line.hasOption("pre");
+
+        ApiCache cache = ApiCaches.create(lenient, allowPreReleases);
 
         for (String dependency : line.getArgList()) {
-            DependencyDownloader downloader;
+            createDownloader(dependency, repoPath, replacements, processedDependencies, cache, lenient)
+                .ifPresent(downloader -> downloader.download(
+                    line.hasOption("latest"),
+                    allowPreReleases,
+                    line.hasOption("extras")
+                ));
 
-            if (dependency.split(":").length == 2) {
-                downloader = new SdistDownloader(dependency, repoPath, replacements, processedDependencies, cache);
-            } else if (dependency.split(":").length == 3) {
-                downloader = new WheelsDownloader(dependency, repoPath, replacements, processedDependencies, cache);
-            } else {
-                String errMsg = "Unable to parse the dependency "
-                    + dependency
-                    + ".\nThe format of dependency should be either <module>:<revision> for source distribution "
-                    + "or <module>:<revision>:<classifier> for Wheels.";
-
-                if (line.hasOption("lenient")) {
-                    logger.error(errMsg);
-                    continue;
-                }
-                throw new IllegalArgumentException(errMsg);
-            }
-
-            downloader.download(
-                line.hasOption("latest"),
-                line.hasOption("pre"),
-                line.hasOption("extras"),
-                line.hasOption("lenient")
-            );
         }
     }
 

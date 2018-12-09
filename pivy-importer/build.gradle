@@ -16,6 +16,19 @@ repositories {
     mavenCentral()
 }
 
+sourceSets {
+    integTest {
+        groovy {
+            srcDir file('src/integTest/groovy')
+        }
+        resources {
+            srcDir file('src/integTest/resources')
+        }
+        compileClasspath += sourceSets.main.output + configurations.testRuntime
+        runtimeClasspath += output + compileClasspath
+    }
+}
+
 dependencies {
     compile 'org.codehaus.groovy:groovy-all:2.4.5'
     compile 'org.apache.httpcomponents:fluent-hc:4.5.1'
@@ -92,6 +105,19 @@ license {
 licenseReport {
     configurations = ['compile', 'testCompile']
 }
+
+task integTest(type: Test) {
+    group 'verification'
+    dependsOn importRequiredDependencies
+    shouldRunAfter tasks.test
+    setTestClassesDirs sourceSets.integTest.output.classesDirs
+    classpath = sourceSets.integTest.runtimeClasspath
+    reports.html.destination file("$buildDir${File.separatorChar}reports${File.separatorChar}integration-test")
+    testLogging.showStandardStreams = true
+    environment['TEST_REPO'] = rootProject.buildDir.toURI().toURL().toString() + '/ivy-repo'
+}
+
+check.dependsOn integTest
 
 publishing.publications.standardjava {
     artifact shadowJar {

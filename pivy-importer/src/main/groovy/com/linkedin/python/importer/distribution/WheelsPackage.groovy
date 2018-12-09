@@ -29,8 +29,7 @@ class WheelsPackage extends PythonPackage {
     @Override
     Map<String, List<String>> getDependencies(boolean latestVersions,
                                               boolean allowPreReleases,
-                                              boolean fetchExtras,
-                                              boolean lenient) {
+                                              boolean fetchExtras) {
         Map<String, List<String>> dependenciesMap
 
         try {

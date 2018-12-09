@@ -45,8 +45,7 @@ abstract class PythonPackage {
 
     abstract Map<String, List<String>> getDependencies(boolean latestVersions,
                                                        boolean allowPreReleases,
-                                                       boolean fetchExtras,
-                                                       boolean lenient)
+                                                       boolean fetchExtras)
 
     protected String explodeZipForTargetEntry(String entryName) {
         def file = new ZipFile(packageFile)
@@ -154,12 +153,12 @@ abstract class PythonPackage {
                 version = projectDetails.getLatestVersion()
             } else {
                 range.endVersion = projectDetails.getLatestVersion()
-                version = projectDetails.getHighestVersionInRange(range, excluded, allowPreReleases)
+                version = projectDetails.getHighestVersionInRange(range, excluded)
             }
         } else if (latestVersions) {
-            version = projectDetails.getHighestVersionInRange(range, excluded, allowPreReleases)
+            version = projectDetails.getHighestVersionInRange(range, excluded)
         } else {
-            version = projectDetails.getLowestVersionInRange(range, excluded, allowPreReleases)
+            version = projectDetails.getLowestVersionInRange(range, excluded)
         }
 
         (name, version) = dependencySubstitution.maybeReplace(name + ':' + version).split(':')

@@ -32,27 +32,26 @@ class WheelsDownloader extends DependencyDownloader {
                      Set<String> processedDependencies, ApiCache cache) {
         super(project, ivyRepoRoot, dependencySubstitution, processedDependencies, cache)
     }
-/**
- * The module names in Wheel artifact names are using "_" to replace "-", eg., python-submit,
- * its wheel artifact is python_subunit-1.3.0-py2.py3-none-any.whl.
- * @param name
- * @return
- */
+
+    /**
+     * The module names in Wheel artifact names are using "_" to replace "-", eg., python-submit,
+     * its wheel artifact is python_subunit-1.3.0-py2.py3-none-any.whl.
+     * @param name
+     * @return
+     */
     static String translateNameToWheelFormat(String name) {
         return name.replaceAll("-", "_")
     }
 
     @Override
-    def downloadDependency(
-        String dep, boolean latestVersions, boolean allowPreReleases, boolean fetchExtras, boolean lenient) {
+    void downloadDependency(String dep, boolean latestVersions, boolean allowPreReleases, boolean fetchExtras) {
 
         def (String name, String version, String classifier) = dep.split(":")
 
         name = translateNameToWheelFormat(name)
         def projectDetails = cache.getDetails(name)
-        // project name is illegal, which means we can't find any information about this project on PyPI
         if (projectDetails == null) {
-            return
+            throw new RuntimeException("$dep name is illegal, can't find any information about this project on PyPI")
         }
 
         version = projectDetails.maybeFixVersion(version)
@@ -61,10 +60,6 @@ class WheelsDownloader extends DependencyDownloader {
             .find { it.filename.equalsIgnoreCase("${name}-${version}-${classifier}.whl") }
 
         if (wheelDetails == null) {
-            if (lenient) {
-                log.error("Unable to find wheels for $dep")
-                return
-            }
             throw new RuntimeException("Unable to find wheels for $dep")
         }
 
@@ -77,7 +72,7 @@ class WheelsDownloader extends DependencyDownloader {
 
         def wheelArtifact = pypiClient.downloadArtifact(destDir, wheelDetails.url)
         def packageDependencies = new WheelsPackage(name, version, wheelArtifact, cache, dependencySubstitution)
-            .getDependencies(latestVersions, allowPreReleases, fetchExtras, lenient)
+            .getDependencies(latestVersions, allowPreReleases, fetchExtras)
 
         log.debug("The dependencies of package $project: is ${packageDependencies.toString()}")
         new IvyFileWriter(name, version, BINARY_DIST_PACKAGE_TYPE, [wheelDetails])
@@ -90,7 +85,7 @@ class WheelsDownloader extends DependencyDownloader {
                     sdist, ivyRepoRoot, dependencySubstitution, processedDependencies, cache)
 
                 ImporterCLI.pullDownPackageAndDependencies(
-                    processedDependencies, sdistDownloader, latestVersions, allowPreReleases, fetchExtras, lenient)
+                    processedDependencies, sdistDownloader, latestVersions, allowPreReleases, fetchExtras)
             }
         }
     }

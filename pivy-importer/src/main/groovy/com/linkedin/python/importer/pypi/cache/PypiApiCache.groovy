@@ -17,17 +17,22 @@ package com.linkedin.python.importer.pypi.cache
 
 import com.linkedin.python.importer.PypiClient
 import com.linkedin.python.importer.pypi.ProjectDetails
+import com.linkedin.python.importer.pypi.ProjectDetailsAware
 import groovy.util.logging.Slf4j
 import org.apache.http.client.HttpResponseException
 
 @Slf4j
 class PypiApiCache implements ApiCache {
-    PypiClient pypiClient = new PypiClient()
+    final PypiClient pypiClient
     Map<String, ProjectDetails> cache = [:].withDefault { String name ->
         new ProjectDetails(pypiClient.downloadMetadata(name))
     }
 
-    ProjectDetails getDetails(String project) {
+    PypiApiCache(PypiClient pypiClient) {
+        this.pypiClient = pypiClient
+    }
+
+    ProjectDetailsAware getDetails(String project) {
         try {
             return cache.get(project)
         } catch (HttpResponseException httpResponseException) {

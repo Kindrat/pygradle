@@ -16,7 +16,7 @@
 package com.linkedin.python.importer.pypi
 
 
-class ProjectDetails {
+class ProjectDetails implements ProjectDetailsAware {
 
     final String name
     final Map<String, List<VersionEntry>> releases = [:]
@@ -31,6 +31,7 @@ class ProjectDetails {
         }
     }
 
+    @Override
     List<VersionEntry> findVersion(String version) {
         if (releases.containsKey(version)) {
             return releases[version]
@@ -39,6 +40,7 @@ class ProjectDetails {
         throw new RuntimeException("Unable to find ${name}@${version}")
     }
 
+    @Override
     String maybeFixVersion(String version) {
         if (hasVersion(version)) {
             return version
@@ -55,15 +57,17 @@ class ProjectDetails {
         throw new RuntimeException("Unable to find version $version for $name")
     }
 
+    @Override
     boolean hasVersion(String version) {
         return releases.containsKey(version)
     }
 
+    @Override
     String getLatestVersion() {
         return latest
     }
 
-    private List<String> getVersionInRange(VersionRange range, List<String> excluded, boolean allowPreReleases) {
+    private List<String> getVersionInRange(VersionRange range, List<String> excluded) {
         String start = range.startVersion ?: '0'
         String end = range.endVersion ?: '999999'
         def sortedReleases = releases.keySet().sort { a, b -> VersionRange.compareVersions(a, b) }
@@ -73,7 +77,7 @@ class ProjectDetails {
             if (excluded.contains(release)) {
                 continue
             }
-            if (!allowPreReleases && release ==~ /^.*\d(a|alpha|b|beta|rc)\d*$/) {
+            if (!satisfies(release)) {
                 // skip alpha/beta/release candidate versions
                 continue
             }
@@ -92,11 +96,18 @@ class ProjectDetails {
         return matchingRange
     }
 
-    String getHighestVersionInRange(VersionRange range, List<String> excluded, boolean allowPreReleases) {
-        return getVersionInRange(range, excluded, allowPreReleases).last()
+    @Override
+    String getHighestVersionInRange(VersionRange range, List<String> excluded) {
+        return getVersionInRange(range, excluded).last()
     }
 
-    String getLowestVersionInRange(VersionRange range, List<String> excluded, boolean allowPreReleases) {
-        return getVersionInRange(range, excluded, allowPreReleases).first()
+    @Override
+    String getLowestVersionInRange(VersionRange range, List<String> excluded) {
+        return getVersionInRange(range, excluded).first()
+    }
+
+    @Override
+    boolean satisfies(String release) {
+        return !(release ==~ /^.*\d(a|alpha|b|beta|rc|pre)\d*$/)
     }
 }

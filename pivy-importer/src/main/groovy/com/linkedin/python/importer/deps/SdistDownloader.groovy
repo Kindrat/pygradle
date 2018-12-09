@@ -33,25 +33,19 @@ class SdistDownloader extends DependencyDownloader {
     }
 
     @Override
-    def downloadDependency(
-        String dep, boolean latestVersions, boolean allowPreReleases, boolean fetchExtras, boolean lenient) {
+    void downloadDependency(String dep, boolean latestVersions, boolean allowPreReleases, boolean fetchExtras) {
 
         def (String name, String version) = dep.split(":")
 
         def projectDetails = cache.getDetails(name)
-        // project name is illegal, which means we can't find any information about this project on PyPI
         if (projectDetails == null) {
-            return
+            throw new RuntimeException("$dep name is illegal, can't find any information about this project on PyPI")
         }
 
         version = projectDetails.maybeFixVersion(version)
         def sdistDetails = projectDetails.findVersion(version).find { it.packageType == SOURCE_DIST_PACKAGE_TYPE }
 
         if (sdistDetails == null) {
-            if (lenient) {
-                log.error("Unable to find source dist for $dep")
-                return
-            }
             throw new RuntimeException("Unable to find source dist for $dep")
         }
 
@@ -64,7 +58,7 @@ class SdistDownloader extends DependencyDownloader {
 
         def sdistArtifact = pypiClient.downloadArtifact(destDir, sdistDetails.url)
         def packageDependencies = new SourceDistPackage(name, version, sdistArtifact, cache, dependencySubstitution)
-            .getDependencies(latestVersions, allowPreReleases, fetchExtras, lenient)
+            .getDependencies(latestVersions, allowPreReleases, fetchExtras)
 
         new IvyFileWriter(name, version, SOURCE_DIST_PACKAGE_TYPE, [sdistDetails])
             .writeIvyFile(destDir, packageDependencies)

@@ -15,27 +15,22 @@
  */
 package com.linkedin.python.importer.pypi.cache
 
-
+import com.linkedin.python.importer.pypi.PreReleaseProjectDetails
 import com.linkedin.python.importer.pypi.ProjectDetailsAware
-import groovy.util.logging.Slf4j
 
-/**
- * Decorator suppresses original exceptions from real {@link PypiApiCache delegate}
- */
-@Slf4j
-class LenientPypiApiCacheDecorator implements ApiCache {
-    final ApiCache delegate
+class PreReleaseCacheDecorator implements ApiCache {
+    private final ApiCache delegate
 
-    LenientPypiApiCacheDecorator(ApiCache delegate) {
+    PreReleaseCacheDecorator(ApiCache delegate) {
         this.delegate = delegate
     }
 
+    @Override
     ProjectDetailsAware getDetails(String project) {
-        try {
-            return delegate.getDetails(project)
-        } catch (IllegalArgumentException exception) {
-            log.error("${exception.message}")
+        def details = delegate.getDetails(project)
+        if (details == null) {
             return null
         }
+        return new PreReleaseProjectDetails(details)
     }
 }

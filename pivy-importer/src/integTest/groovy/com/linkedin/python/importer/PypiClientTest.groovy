@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2016 LinkedIn Corp.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,23 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.linkedin.python.importer.pypi.cache
+package com.linkedin.python.importer
 
-import com.linkedin.python.importer.PypiClient
+import spock.lang.Specification
 
 /**
- * Utility to createDownloader Pypi cache objects depending on application configuration
+ * Testing integration with Pypi API
  */
-class ApiCaches {
-    static ApiCache create(boolean lenient, boolean allowPreReleases) {
+class PypiClientTest extends Specification {
+    def "check client interaction"() {
+        given:
         PypiClient client = new PypiClient()
-        ApiCache cache = new PypiApiCache(client)
-        if (lenient) {
-            cache = new LenientPypiApiCacheDecorator(cache)
-        }
-        if (allowPreReleases) {
-            cache = new PreReleaseCacheDecorator(cache)
-        }
-        return cache
+
+        when:
+        def metadata = client.downloadMetadata("flake8")
+        then:
+        !metadata.isEmpty()
     }
 }

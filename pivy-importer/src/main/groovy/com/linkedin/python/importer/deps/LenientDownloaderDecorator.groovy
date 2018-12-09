@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2016 LinkedIn Corp.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,29 +13,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.linkedin.python.importer.pypi.cache
+package com.linkedin.python.importer.deps
 
 
-import com.linkedin.python.importer.pypi.ProjectDetailsAware
 import groovy.util.logging.Slf4j
 
-/**
- * Decorator suppresses original exceptions from real {@link PypiApiCache delegate}
- */
 @Slf4j
-class LenientPypiApiCacheDecorator implements ApiCache {
-    final ApiCache delegate
+class LenientDownloaderDecorator implements Downloader {
+    private final Downloader delegate
 
-    LenientPypiApiCacheDecorator(ApiCache delegate) {
+    LenientDownloaderDecorator(Downloader delegate) {
         this.delegate = delegate
     }
 
-    ProjectDetailsAware getDetails(String project) {
+    @Override
+    void download(boolean latestVersions, boolean allowPreReleases, boolean fetchExtras) {
+        delegate.download(latestVersions, allowPreReleases, fetchExtras)
+    }
+
+    @Override
+    void downloadDependency(String dep, boolean latestVersions, boolean allowPreReleases, boolean fetchExtras) {
         try {
-            return delegate.getDetails(project)
-        } catch (IllegalArgumentException exception) {
-            log.error("${exception.message}")
-            return null
+            delegate.downloadDependency(dep, latestVersions, allowPreReleases, fetchExtras)
+        } catch (Exception e) {
+            log.error("Unable to load $dep. ${e.message}")
         }
     }
 }

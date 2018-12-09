@@ -15,6 +15,7 @@
  */
 package com.linkedin.python.importer.distribution
 
+import com.linkedin.python.importer.PypiClient
 import com.linkedin.python.importer.deps.DependencySubstitution
 import com.linkedin.python.importer.pypi.cache.PypiApiCache
 import groovy.transform.InheritConstructors
@@ -25,8 +26,7 @@ class TestPythonPackage extends PythonPackage {
     @Override
     Map<String, List<String>> getDependencies(boolean latestVersions,
                                               boolean allowPreReleases,
-                                              boolean fetchExtras,
-                                              boolean lenient) {
+                                              boolean fetchExtras) {
         return [:]
     }
 }
@@ -39,7 +39,8 @@ class PythonPackageTest extends Specification {
         testDirectory = new File(getClass().getClassLoader().getResource("deps").getFile())
         File testPackageFile = new File(testDirectory, "WMI-1.4.8.zip")
         DependencySubstitution testDependencySubstitution = new DependencySubstitution([:], [:])
-        PypiApiCache testPypiApiCache = new PypiApiCache()
+        PypiClient client = new PypiClient()
+        PypiApiCache testPypiApiCache = new PypiApiCache(client)
 
         testPythonPackage = new TestPythonPackage("WMI", "1.4.8", testPackageFile,
             testPypiApiCache, testDependencySubstitution)

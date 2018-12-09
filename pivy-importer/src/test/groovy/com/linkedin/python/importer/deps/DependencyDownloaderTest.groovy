@@ -15,6 +15,7 @@
  */
 package com.linkedin.python.importer.deps
 
+import com.linkedin.python.importer.PypiClient
 import com.linkedin.python.importer.pypi.cache.ApiCache
 import com.linkedin.python.importer.pypi.cache.PypiApiCache
 import groovy.transform.InheritConstructors
@@ -25,9 +26,7 @@ import spock.lang.Specification
 @InheritConstructors
 class TestDependencyDownloader extends DependencyDownloader {
     @Override
-    String downloadDependency(
-            String dep, boolean latestVersions, boolean allowPreReleases, boolean fetchExtras, boolean lenient) {
-        return "Successfully download dependency in unittest scenario!"
+    void downloadDependency(String dep, boolean latestVersions, boolean allowPreReleases, boolean fetchExtras) {
     }
 }
 
@@ -44,7 +43,8 @@ class DependencyDownloaderTest extends Specification {
         String testProject = "targetProject:1.1.1"
         DependencySubstitution testDependencySubstitution = new DependencySubstitution([:], [:])
         Set<String> testProcessedDependencies = new HashSet<>()
-        ApiCache cache = new PypiApiCache()
+        PypiClient client = new PypiClient()
+        ApiCache cache = new PypiApiCache(client)
 
         when:
         TestDependencyDownloader dependencyDownloader =
@@ -64,12 +64,12 @@ class DependencyDownloaderTest extends Specification {
         String testProject = "targetProject:1.1.1"
         DependencySubstitution testDependencySubstitution = new DependencySubstitution([:], [:])
         Set<String> testProcessedDependencies = new HashSet<>()
-        ApiCache cache = new PypiApiCache()
+        PypiClient client = new PypiClient()
+        ApiCache cache = new PypiApiCache(client)
 
         boolean testLatestVersions = true
         boolean testAllowPreReleases = false
         boolean testFetchExtras = false
-        boolean testLenient = true
         TestDependencyDownloader dependencyDownloader =
             new TestDependencyDownloader(
                 testProject,
@@ -80,7 +80,7 @@ class DependencyDownloaderTest extends Specification {
             )
 
         when:
-        dependencyDownloader.download(testLatestVersions, testAllowPreReleases, testFetchExtras, testLenient)
+        dependencyDownloader.download(testLatestVersions, testAllowPreReleases, testFetchExtras)
 
         then:
         assert dependencyDownloader.dependencies.isEmpty()
