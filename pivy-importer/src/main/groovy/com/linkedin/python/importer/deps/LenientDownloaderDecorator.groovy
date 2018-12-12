@@ -27,16 +27,18 @@ class LenientDownloaderDecorator implements Downloader {
     }
 
     @Override
-    void download(boolean latestVersions, boolean allowPreReleases, boolean fetchExtras) {
-        delegate.download(latestVersions, allowPreReleases, fetchExtras)
+    List<String> download(boolean latestVersions, boolean allowPreReleases, boolean fetchExtras) {
+        try {
+            return delegate.download(latestVersions, allowPreReleases, fetchExtras)
+        } catch (Exception e) {
+            def dependency = dependency()
+            log.error("Unable to load $dependency. ${e.message}")
+            return Collections.emptyList()
+        }
     }
 
     @Override
-    void downloadDependency(String dep, boolean latestVersions, boolean allowPreReleases, boolean fetchExtras) {
-        try {
-            delegate.downloadDependency(dep, latestVersions, allowPreReleases, fetchExtras)
-        } catch (Exception e) {
-            log.error("Unable to load $dep. ${e.message}")
-        }
+    String dependency() {
+        return delegate.dependency()
     }
 }

@@ -15,12 +15,13 @@
  */
 package com.linkedin.python.importer.distribution
 
-import com.linkedin.python.importer.PypiClient
+import com.linkedin.python.importer.pypi.client.Client
+import com.linkedin.python.importer.pypi.client.PypiClient
 import com.linkedin.python.importer.deps.DependencySubstitution
 import com.linkedin.python.importer.pypi.cache.PypiApiCache
 import spock.lang.Specification
 
-class SourceDistPacakgeTest extends Specification {
+class SourceDistPackageTest extends Specification {
     private File testDirectory
     private SourceDistPackage testSourceDistPackage
 
@@ -28,7 +29,7 @@ class SourceDistPacakgeTest extends Specification {
         testDirectory = new File(getClass().getClassLoader().getResource("deps").getFile())
         File testPackageFile = new File(testDirectory, "python-dateutil-2.7.3.tar.gz")
         DependencySubstitution testDependencySubstitution = new DependencySubstitution([:], [:])
-        PypiClient client = new PypiClient()
+        Client client = new PypiClient()
         PypiApiCache testPypiApiCache = new PypiApiCache(client)
 
         testSourceDistPackage = new SourceDistPackage("python-dateutil", "2.7.3", testPackageFile,

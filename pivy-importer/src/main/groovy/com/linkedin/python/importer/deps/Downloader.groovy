@@ -16,7 +16,7 @@
 package com.linkedin.python.importer.deps
 
 interface Downloader {
-    void download(boolean latestVersions, boolean allowPreReleases, boolean fetchExtras)
+    List<String> download(boolean latestVersions, boolean allowPreReleases, boolean fetchExtras)
 
-    void downloadDependency(String dep, boolean latestVersions, boolean allowPreReleases, boolean fetchExtras)
+    String dependency()
 }

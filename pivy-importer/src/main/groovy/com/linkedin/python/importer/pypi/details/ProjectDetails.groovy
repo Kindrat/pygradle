@@ -13,44 +13,55 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.linkedin.python.importer.pypi
+package com.linkedin.python.importer.pypi.details
 
+import com.linkedin.python.importer.deps.Dependency
+import com.linkedin.python.importer.pypi.VersionEntry
+import com.linkedin.python.importer.pypi.VersionRange
+
+import static java.util.Collections.singletonList
+import static java.util.Collections.singletonMap
 
 class ProjectDetails implements ProjectDetailsAware {
-
     final String name
-    final Map<String, List<VersionEntry>> releases = [:]
+    final Map<String, List<VersionEntry>> releases
     final String latest
 
-    ProjectDetails(Map<String, Object> details) {
-        name = details.info.name
-        latest = details.info.version
+    ProjectDetails(String name, Map<String, List<VersionEntry>> releases, String latest) {
+        this.name = name
+        this.releases = releases
+        this.latest = latest
+    }
 
-        details.releases.each { version, entry ->
-            releases[version] = entry.collect { it -> new VersionEntry(it.url, it.packagetype, it.filename) }
-        }
+    static ProjectDetails createFrom(String name, VersionEntry versionEntry) {
+        return new ProjectDetails(name, singletonMap(versionEntry.version, singletonList(versionEntry)),
+            versionEntry.version)
     }
 
     @Override
-    List<VersionEntry> findVersion(String version) {
-        if (releases.containsKey(version)) {
-            return releases[version]
+    VersionEntry findVersion(Dependency dependency) {
+        String fixedVersion = maybeFixVersion(dependency.version)
+        if (releases.containsKey(fixedVersion)) {
+            def versionEntry = releases[fixedVersion].find { it.packageType == dependency.type }
+            if (versionEntry != null) {
+                return versionEntry
+            }
         }
 
-        throw new RuntimeException("Unable to find ${name}@${version}")
+        throw new RuntimeException("Unable to find $dependency")
     }
 
     @Override
     String maybeFixVersion(String version) {
-        if (hasVersion(version)) {
+        if (releases.containsKey(version)) {
             return version
         }
 
-        if (hasVersion(version + '.0')) {
+        if (releases.containsKey(version + '.0')) {
             return version + '.0'
         }
 
-        if (hasVersion(version + '.0.0')) {
+        if (releases.containsKey(version + '.0.0')) {
             return version + '.0.0'
         }
 
@@ -58,16 +69,11 @@ class ProjectDetails implements ProjectDetailsAware {
     }
 
     @Override
-    boolean hasVersion(String version) {
-        return releases.containsKey(version)
-    }
-
-    @Override
     String getLatestVersion() {
         return latest
     }
 
-    private List<String> getVersionInRange(VersionRange range, List<String> excluded) {
+    List<String> getVersionInRange(VersionRange range, List<String> excluded) {
         String start = range.startVersion ?: '0'
         String end = range.endVersion ?: '999999'
         def sortedReleases = releases.keySet().sort { a, b -> VersionRange.compareVersions(a, b) }
@@ -94,16 +100,6 @@ class ProjectDetails implements ProjectDetailsAware {
         }
 
         return matchingRange
-    }
-
-    @Override
-    String getHighestVersionInRange(VersionRange range, List<String> excluded) {
-        return getVersionInRange(range, excluded).last()
-    }
-
-    @Override
-    String getLowestVersionInRange(VersionRange range, List<String> excluded) {
-        return getVersionInRange(range, excluded).first()
     }
 
     @Override

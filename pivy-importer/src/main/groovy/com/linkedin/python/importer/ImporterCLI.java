@@ -17,10 +17,7 @@ package com.linkedin.python.importer;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
-import com.linkedin.python.importer.deps.DependencyDownloader;
 import com.linkedin.python.importer.deps.DependencySubstitution;
-import com.linkedin.python.importer.pypi.cache.ApiCache;
-import com.linkedin.python.importer.pypi.cache.ApiCaches;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
@@ -29,12 +26,8 @@ import org.apache.commons.cli.Options;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Set;
-
-import static com.linkedin.python.importer.deps.DependencyDownloaders.createDownloader;
 
 public class ImporterCLI {
 
@@ -77,36 +70,18 @@ public class ImporterCLI {
         logger.info("Execution Finished!");
     }
 
-    public static void pullDownPackageAndDependencies(Set<String> processedDependencies,
-                                                      DependencyDownloader artifactDownloader,
-                                                      boolean latestVersions,
-                                                      boolean allowPreReleases,
-                                                      boolean fetchExtras) {
-
-        artifactDownloader.getProcessedDependencies().addAll(processedDependencies);
-        artifactDownloader.download(latestVersions, allowPreReleases, fetchExtras);
-        processedDependencies.addAll(artifactDownloader.getProcessedDependencies());
-    }
-
     private static void importPackages(CommandLine line, File repoPath) {
         DependencySubstitution replacements = new DependencySubstitution(buildSubstitutionMap(line),
             buildForceMap(line));
-        Set<String> processedDependencies = new HashSet<>();
 
         boolean lenient = line.hasOption("lenient");
         boolean allowPreReleases = line.hasOption("pre");
+        boolean fetchExtras = line.hasOption("extras");
+        boolean latestVersions = line.hasOption("latest");
+        String localRepo = line.getOptionValue("local_repo");
 
-        ApiCache cache = ApiCaches.create(lenient, allowPreReleases);
-
-        for (String dependency : line.getArgList()) {
-            createDownloader(dependency, repoPath, replacements, processedDependencies, cache, lenient)
-                .ifPresent(downloader -> downloader.download(
-                    line.hasOption("latest"),
-                    allowPreReleases,
-                    line.hasOption("extras")
-                ));
-
-        }
+        new PypiImporter(lenient, allowPreReleases, fetchExtras, latestVersions, repoPath, localRepo)
+            .importDependencies(replacements, line.getArgs());
     }
 
     private static Map<String, String> buildForceMap(CommandLine line) {
@@ -180,6 +155,12 @@ public class ImporterCLI {
             .desc("Allows to import all available dependencies with logging missed")
             .build();
 
+        Option localRepo = Option.builder()
+            .longOpt("local_repo")
+            .numberOfArgs(1)
+            .desc("Local repo path (file or dir)")
+            .build();
+
         Options options = new Options();
         options.addOption(replacement);
         options.addOption(repo);
@@ -190,6 +171,7 @@ public class ImporterCLI {
         options.addOption(pre);
         options.addOption(extras);
         options.addOption(lenient);
+        options.addOption(localRepo);
 
         return options;
     }

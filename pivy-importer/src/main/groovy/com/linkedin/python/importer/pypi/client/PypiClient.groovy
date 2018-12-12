@@ -13,19 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.linkedin.python.importer
+package com.linkedin.python.importer.pypi.client
 
+import com.linkedin.python.importer.deps.DependencyType
+import com.linkedin.python.importer.pypi.VersionEntry
+import com.linkedin.python.importer.pypi.details.ProjectDetails
+import com.linkedin.python.importer.pypi.details.ProjectDetailsAware
 import com.linkedin.python.importer.util.ProxyDetector
 import groovy.json.JsonSlurper
 import groovy.util.logging.Slf4j
 import org.apache.commons.io.FilenameUtils
 import org.apache.http.client.fluent.Request
 
+import static java.util.Collections.unmodifiableMap
+
 @Slf4j
-class PypiClient {
+class PypiClient implements Client{
 
+    @Override
     File downloadArtifact(File destDir, String url) {
-
         def filename = FilenameUtils.getName(new URL(url).getPath())
         def contents = new File(destDir, filename)
 
@@ -53,7 +59,8 @@ class PypiClient {
         return contents
     }
 
-    Map<String, Object> downloadMetadata(String dependency) {
+    @Override
+    ProjectDetailsAware downloadMetadata(String dependency) {
         def url = "https://pypi.org/pypi/$dependency/json"
         log.debug("Metadata url: {}", url)
         def proxy = ProxyDetector.maybeGetHttpProxy()
@@ -66,7 +73,15 @@ class PypiClient {
             .socketTimeout(10000)
             .execute().returnContent().asString()
 
-        def object = new JsonSlurper().parseText(content)
-        return (Map<String, Object>) object
+        Map<String, Object> details = new JsonSlurper().parseText(content) as Map<String, Object>
+        def name = details.info.name
+        def latest = details.info.version
+        Map<String, List<VersionEntry>> releases = new HashMap<>()
+
+        details.releases.each { String version, entry ->
+            releases[version] = entry.collect {
+                it -> new VersionEntry(it.url, DependencyType.forPythonType(it.packagetype), it.filename, version) }
+        }
+        return new ProjectDetails(name, unmodifiableMap(releases), latest)
     }
 }

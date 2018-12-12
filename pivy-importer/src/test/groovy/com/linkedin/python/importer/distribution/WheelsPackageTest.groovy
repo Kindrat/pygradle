@@ -15,7 +15,7 @@
  */
 package com.linkedin.python.importer.distribution
 
-import com.linkedin.python.importer.PypiClient
+import com.linkedin.python.importer.pypi.client.PypiClient
 import com.linkedin.python.importer.deps.DependencySubstitution
 import com.linkedin.python.importer.pypi.cache.PypiApiCache
 import spock.lang.Specification

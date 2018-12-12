@@ -32,7 +32,7 @@ class IvyFileWriterTest extends Specification {
 
     def "test writing Ivy file for wheel which has runtime dependencies"() {
         given:
-        VersionEntry testVersionEntry = new VersionEntry("testURI", "wheel", "Django-2.0.6-py3-none-any.whl")
+        VersionEntry testVersionEntry = new VersionEntry("testURI", "wheel", "Django-2.0.6-py3-none-any.whl", null)
         IvyFileWriter testIvyFileWriter =  new IvyFileWriter("Django", "2.0.6", "bdist_wheel", [testVersionEntry])
         Map<String, List<String>> testDepsMap = [:]
         testDepsMap["argon2"] = ["argon2_cffi:18.1.0"]

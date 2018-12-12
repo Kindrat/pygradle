@@ -15,6 +15,7 @@
  */
 package com.linkedin.python.importer
 
+import com.linkedin.python.importer.pypi.client.PypiClient
 import spock.lang.Specification
 
 /**

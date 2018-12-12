@@ -15,6 +15,7 @@
  */
 package com.linkedin.python.importer.pypi
 
+import com.linkedin.python.importer.pypi.details.ProjectDetails
 import groovy.json.JsonSlurper
 import spock.lang.Specification
 

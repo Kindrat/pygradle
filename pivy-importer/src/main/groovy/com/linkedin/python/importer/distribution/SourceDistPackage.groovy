@@ -15,14 +15,21 @@
  */
 package com.linkedin.python.importer.distribution
 
-import groovy.transform.InheritConstructors
+import com.linkedin.python.importer.deps.DependencySubstitution
+import com.linkedin.python.importer.pypi.cache.ApiCache
 import groovy.util.logging.Slf4j
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
 
-@Slf4j @InheritConstructors
+@Slf4j
 class SourceDistPackage extends PythonPackage {
+
+    SourceDistPackage(String moduleName, String version, File packageFile, ApiCache cache,
+                      DependencySubstitution replacements) {
+        super(moduleName, version, packageFile, cache, replacements)
+    }
+
     @Override
     Map<String, List<String>> getDependencies(boolean latestVersions,
                                               boolean allowPreReleases,

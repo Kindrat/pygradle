@@ -15,56 +15,52 @@
  */
 package com.linkedin.python.importer.deps
 
+import com.linkedin.python.importer.distribution.PackageFactory
 import com.linkedin.python.importer.distribution.SourceDistPackage
 import com.linkedin.python.importer.ivy.IvyFileWriter
+import com.linkedin.python.importer.ivy.IvyRepo
 import com.linkedin.python.importer.pypi.cache.ApiCache
+import com.linkedin.python.importer.pypi.client.Client
 import groovy.util.logging.Slf4j
 
-import java.nio.file.Paths
+import static com.linkedin.python.importer.deps.Dependency.parseFrom
+import static com.linkedin.python.importer.deps.DependencyType.*
 
 @Slf4j
 class SdistDownloader extends DependencyDownloader {
-    static final String SOURCE_DIST_PACKAGE_TYPE = "sdist"
-    static final String SOURCE_DIST_ORG = "pypi"
+    private final IvyRepo localIvyRepo
+    private final Client pypiClient
+    private final ApiCache cache
+    private final PackageFactory packageFactory
 
-    SdistDownloader(String project, File ivyRepoRoot, DependencySubstitution dependencySubstitution,
-                    Set<String> processedDependencies, ApiCache cache) {
-        super(project, ivyRepoRoot, dependencySubstitution, processedDependencies, cache)
+    SdistDownloader(String project, IvyRepo localIvyRepo, ApiCache cache, Client pypiClient, PackageFactory packageFactory) {
+        super(project)
+        this.cache = cache
+        this.localIvyRepo = localIvyRepo
+        this.pypiClient = pypiClient
+        this.packageFactory = packageFactory
     }
 
     @Override
-    void downloadDependency(String dep, boolean latestVersions, boolean allowPreReleases, boolean fetchExtras) {
-
-        def (String name, String version) = dep.split(":")
-
-        def projectDetails = cache.getDetails(name)
-        if (projectDetails == null) {
-            throw new RuntimeException("$dep name is illegal, can't find any information about this project on PyPI")
-        }
-
-        version = projectDetails.maybeFixVersion(version)
-        def sdistDetails = projectDetails.findVersion(version).find { it.packageType == SOURCE_DIST_PACKAGE_TYPE }
-
-        if (sdistDetails == null) {
-            throw new RuntimeException("Unable to find source dist for $dep")
-        }
+    List<String> download(boolean latestVersions, boolean allowPreReleases, boolean fetchExtras) {
+        def dependency = parseFrom(project)
+        def projectDetails = cache.getDetails(dependency)
+        def matchingVersion = projectDetails.findVersion(dependency)
 
         // make sure the module name has the right letter case and dash or underscore as PyPI
-        name = getActualModuleNameFromFilename(sdistDetails.filename, version)
-        log.info("Pulling in $name:$version")
+        def name = getActualModuleNameFromFilename(matchingVersion.filename, matchingVersion.version)
+        log.info("Pulling in $dependency")
 
-        def destDir = Paths.get(ivyRepoRoot.absolutePath, SOURCE_DIST_ORG, name, version).toFile()
-        destDir.mkdirs()
+        def destDir = localIvyRepo.acquireArtifactDirectory(dependency)
+        def artifact = pypiClient.downloadArtifact(destDir, matchingVersion.url)
 
-        def sdistArtifact = pypiClient.downloadArtifact(destDir, sdistDetails.url)
-        def packageDependencies = new SourceDistPackage(name, version, sdistArtifact, cache, dependencySubstitution)
+        def packageDependencies = packageFactory.createPackage(SOURCE_DISTRIBUTION, name, matchingVersion.version, artifact)
             .getDependencies(latestVersions, allowPreReleases, fetchExtras)
 
-        new IvyFileWriter(name, version, SOURCE_DIST_PACKAGE_TYPE, [sdistDetails])
-            .writeIvyFile(destDir, packageDependencies)
+        localIvyRepo.writeIvyMetadata(dependency, matchingVersion, packageDependencies)
 
-        packageDependencies.each { key, value ->
-            dependencies.addAll(value)
-        }
+        List<String> dependencies = new ArrayList<>()
+        packageDependencies.values().each { list -> dependencies.addAll(list)}
+        return dependencies
     }
 }

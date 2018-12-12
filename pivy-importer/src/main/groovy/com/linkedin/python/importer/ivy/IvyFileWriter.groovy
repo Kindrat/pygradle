@@ -15,22 +15,23 @@
  */
 package com.linkedin.python.importer.ivy
 
+import com.linkedin.python.importer.deps.Dependency
+import com.linkedin.python.importer.deps.DependencyType
 import com.linkedin.python.importer.pypi.VersionEntry
-import com.linkedin.python.importer.deps.SdistDownloader
-import com.linkedin.python.importer.deps.WheelsDownloader
-import groovy.transform.TupleConstructor
 import groovy.xml.MarkupBuilder
 import org.apache.commons.io.FilenameUtils
 
-@TupleConstructor
 class IvyFileWriter {
-    final String name
-    final String version
-    final String packageType
+    final Dependency dependency
     final List<VersionEntry> archives
 
+    IvyFileWriter(Dependency dependency, List<VersionEntry> archives) {
+        this.dependency = dependency
+        this.archives = archives
+    }
+
     @SuppressWarnings("SpaceAroundClosureArrow")
-    def writeIvyFile(File destDir, Map<String, List<String>> dependenciesMap, String classifier=null) {
+    def writeIvyFile(File destDir, Map<String, List<String>> dependenciesMap) {
         def writer = new StringWriter()
         def xml = new MarkupBuilder(writer)
         xml.setDoubleQuotes(true)
@@ -44,7 +45,7 @@ class IvyFileWriter {
         xml.'ivy-module'(version: "2.0", 'xmlns:e': "http://ant.apache.org/ivy/extra", 'xmlns:m': "http://ant.apache.org/ivy/maven") {
             // fix the issue MarkupBuilder escapes ">" into "&gt"
             setEscapeAttributes(false)
-            info(organisation: getOrganisation(), module: name, revision: version)
+            info(organisation:dependency.type.org, module: dependency.moduleName, revision: dependency.version)
             configurations {
                 def configurations = new HashSet<>(dependenciesMap.keySet())
                 configurations.add("source")
@@ -73,10 +74,10 @@ class IvyFileWriter {
 
         def ivyText = writer.toString()
 
-        if (packageType == SdistDownloader.SOURCE_DIST_PACKAGE_TYPE) {
-            new File(destDir, "${name}-${version}.ivy").text = ivyText
-        } else if (packageType == WheelsDownloader.BINARY_DIST_PACKAGE_TYPE) {
-            new File(destDir, "${name}-${version}-${classifier}.ivy").text = ivyText
+        if (dependency.type == DependencyType.SOURCE_DISTRIBUTION) {
+            new File(destDir, "${dependency.moduleName}-${dependency.version}.ivy").text = ivyText
+        } else if (dependency.type == DependencyType.WHEEL) {
+            new File(destDir, "${dependency.moduleName}-${dependency.version}-${dependency.classifier}.ivy").text = ivyText
         }
     }
 
@@ -84,10 +85,10 @@ class IvyFileWriter {
         def publicationMap = archives.collect { artifact ->
             def ext = artifact.filename.contains(".tar.") ? artifact.filename.find('tar\\..*') : FilenameUtils.getExtension(artifact.filename)
             String filename = artifact.filename - ("." + ext)
-            def source = SdistDownloader.SOURCE_DIST_PACKAGE_TYPE == artifact.packageType
-            def map = [name: name, ext: ext, conf: source ? 'source' : 'default', type: ext]
+            def source = DependencyType.SOURCE_DISTRIBUTION == artifact.packageType
+            def map = [name: dependency.moduleName, ext: ext, conf: source ? 'source' : 'default', type: ext]
 
-            if (filename.indexOf(version) + version.length() + 1 < filename.length()) {
+            if (filename.indexOf(dependency.version) + dependency.version.length() + 1 < filename.length()) {
                 map['m:classifier'] = getClassifier(filename)
             }
             return map
@@ -97,20 +98,6 @@ class IvyFileWriter {
     }
 
     private String getClassifier(String filename) {
-        return filename.substring(filename.indexOf(version) + version.length() + 1)
-    }
-
-    private String getOrganisation() {
-        String organisation
-
-        if (packageType == SdistDownloader.SOURCE_DIST_PACKAGE_TYPE) {
-            organisation = SdistDownloader.SOURCE_DIST_ORG
-        } else if (packageType == WheelsDownloader.BINARY_DIST_PACKAGE_TYPE) {
-            organisation = WheelsDownloader.BINARY_DIST_ORG
-        } else {
-            throw new RuntimeException("Package type $packageType is not supported yet.")
-        }
-
-        return organisation
+        return filename.substring(filename.indexOf(dependency.version) + version.length() + 1)
     }
 }

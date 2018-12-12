@@ -15,20 +15,38 @@
  */
 package com.linkedin.python.importer.deps
 
+import com.linkedin.python.importer.distribution.PackageFactory
+import com.linkedin.python.importer.ivy.IvyRepo
 import com.linkedin.python.importer.pypi.cache.ApiCache
+import com.linkedin.python.importer.pypi.client.Client
 import groovy.util.logging.Slf4j
 
 @Slf4j
-class DependencyDownloaders {
-    static Optional<Downloader> createDownloader(String dependency, File repoPath, DependencySubstitution replacements,
-                                                 Set<String> processedDependencies, ApiCache cache, boolean lenient) {
+class DownloaderFactory {
+    private final IvyRepo localIvyRepo
+    private final DependencySubstitution replacements
+    private final ApiCache cache
+    private final Client pypiClient
+    private final PackageFactory packageFactory
+    private final boolean lenient
 
+    DownloaderFactory(IvyRepo localIvyRepo, DependencySubstitution replacements, ApiCache cache, Client pypiClient,
+                      PackageFactory packageFactory, boolean lenient) {
+        this.localIvyRepo = localIvyRepo
+        this.replacements = replacements
+        this.cache = cache
+        this.pypiClient = pypiClient
+        this.packageFactory = packageFactory
+        this.lenient = lenient
+    }
+
+    Downloader createDownloader(String dependency) {
         Downloader downloader
         def parts = dependency.split(":")
         if (parts.length == 2) { // <module> : <version>
-            downloader = new SdistDownloader(dependency, repoPath, replacements, processedDependencies, cache)
+            downloader = new SdistDownloader(dependency, localIvyRepo, cache, pypiClient, packageFactory)
         } else if (parts.length == 3) { // <module> : <version> : <classifier>
-            downloader = new WheelsDownloader(dependency, repoPath, replacements, processedDependencies, cache)
+            downloader = new WheelsDownloader(dependency, localIvyRepo, cache, pypiClient, packageFactory)
         } else {
             String errMsg = "Unable to parse the dependency "
             +dependency
@@ -37,14 +55,14 @@ class DependencyDownloaders {
 
             if (lenient) {
                 log.error(errMsg)
-                return Optional.empty()
+                return null
             }
             throw new IllegalArgumentException(errMsg)
         }
 
         if (lenient) {
-            return Optional.of(new LenientDownloaderDecorator(downloader))
+            return new LenientDownloaderDecorator(downloader)
         }
-        return Optional.of(downloader)
+        return downloader
     }
 }

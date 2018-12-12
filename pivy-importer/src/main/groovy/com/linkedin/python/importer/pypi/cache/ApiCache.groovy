@@ -15,9 +15,11 @@
  */
 package com.linkedin.python.importer.pypi.cache
 
-
-import com.linkedin.python.importer.pypi.ProjectDetailsAware
+import com.linkedin.python.importer.deps.Dependency
+import com.linkedin.python.importer.pypi.details.ProjectDetailsAware
 
 interface ApiCache {
-    ProjectDetailsAware getDetails(String project)
+    ProjectDetailsAware getDetails(String dependency)
+
+    ProjectDetailsAware getDetails(Dependency dependency)
 }

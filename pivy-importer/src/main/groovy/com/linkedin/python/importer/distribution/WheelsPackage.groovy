@@ -15,17 +15,23 @@
  */
 package com.linkedin.python.importer.distribution
 
+import com.linkedin.python.importer.deps.DependencySubstitution
+import com.linkedin.python.importer.pypi.cache.ApiCache
 import groovy.json.JsonSlurper
-import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
 
-@Slf4j @InheritConstructors
+@Slf4j
 class WheelsPackage extends PythonPackage {
     /**
      * Get all the dependencies from package metadata. Json metadata is preferred since Version 2.0 of metadata
      * is migrated to JSON representation. See details at https://legacy.python.org/dev/peps/pep-0426/#abstract.
      * @return a Map whose key is configuration and value is dependencies List
      */
+    WheelsPackage(String moduleName, String version, File packageFile, ApiCache cache,
+                  DependencySubstitution replacements) {
+        super(moduleName, version, packageFile, cache, replacements)
+    }
+
     @Override
     Map<String, List<String>> getDependencies(boolean latestVersions,
                                               boolean allowPreReleases,
@@ -35,7 +41,7 @@ class WheelsPackage extends PythonPackage {
         try {
             dependenciesMap = parseRuntimeRequiresFromMetadataJson(
                 runtimeRequiresFromMetadataJson, latestVersions, allowPreReleases, fetchExtras)
-        } catch(Exception e) {
+        } catch (Exception e) {
             log.debug("Failed to parse Json Metadata for package ${packageFile.name}: ${e.message} " +
                 "Parsing METADATA text file instead.")
             dependenciesMap = parseDistRequiresFromMetadataText(
@@ -182,5 +188,15 @@ class WheelsPackage extends PythonPackage {
     protected String getMetadataText() {
         String metadataTextEntry = moduleName + '-' + version + ".dist-info/METADATA"
         return explodeZipForTargetEntry(metadataTextEntry)
+    }
+
+    /**
+     * The module names in Wheel artifact names are using "_" to replace "-", eg., python-submit,
+     *     its wheel artifact is python_subunit-1.3.0-py2.py3-none-any.whl.
+     * @param moduleName
+     * @return
+     */
+    static String convertModuleName(String moduleName) {
+        return moduleName.replaceAll("-", "_")
     }
 }

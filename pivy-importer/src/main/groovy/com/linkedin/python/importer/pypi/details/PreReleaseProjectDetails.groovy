@@ -13,7 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.linkedin.python.importer.pypi
+package com.linkedin.python.importer.pypi.details
+
+import com.linkedin.python.importer.deps.Dependency
+import com.linkedin.python.importer.pypi.VersionEntry
+import com.linkedin.python.importer.pypi.VersionRange
 
 class PreReleaseProjectDetails implements ProjectDetailsAware {
     private final ProjectDetailsAware delegate
@@ -23,23 +27,13 @@ class PreReleaseProjectDetails implements ProjectDetailsAware {
     }
 
     @Override
-    List<VersionEntry> findVersion(String version) {
-        return delegate.findVersion(version)
+    VersionEntry findVersion(Dependency dependency) {
+        return delegate.findVersion(dependency)
     }
 
     @Override
-    String maybeFixVersion(String version) {
-        return delegate.maybeFixVersion(version)
-    }
-
-    @Override
-    String getHighestVersionInRange(VersionRange range, List<String> excluded) {
-        return delegate.getHighestVersionInRange(range, excluded)
-    }
-
-    @Override
-    String getLowestVersionInRange(VersionRange range, List<String> excluded) {
-        return delegate.getLowestVersionInRange(range, excluded)
+    List<String> getVersionInRange(VersionRange range, List<String> excluded) {
+        return delegate.getVersionInRange(range, excluded)
     }
 
     @Override
@@ -53,12 +47,12 @@ class PreReleaseProjectDetails implements ProjectDetailsAware {
     }
 
     @Override
-    boolean hasVersion(String version) {
-        return delegate.hasVersion(version)
+    boolean satisfies(String version) {
+        return true
     }
 
     @Override
-    boolean satisfies(String version) {
-        return true
+    String maybeFixVersion(String version) {
+        return delegate.maybeFixVersion(version)
     }
 }

@@ -15,8 +15,9 @@
  */
 package com.linkedin.python.importer.pypi.cache
 
-import com.linkedin.python.importer.pypi.PreReleaseProjectDetails
-import com.linkedin.python.importer.pypi.ProjectDetailsAware
+import com.linkedin.python.importer.deps.Dependency
+import com.linkedin.python.importer.pypi.details.PreReleaseProjectDetails
+import com.linkedin.python.importer.pypi.details.ProjectDetailsAware
 
 class PreReleaseCacheDecorator implements ApiCache {
     private final ApiCache delegate
@@ -26,11 +27,12 @@ class PreReleaseCacheDecorator implements ApiCache {
     }
 
     @Override
-    ProjectDetailsAware getDetails(String project) {
-        def details = delegate.getDetails(project)
-        if (details == null) {
-            return null
-        }
-        return new PreReleaseProjectDetails(details)
+    ProjectDetailsAware getDetails(String dependency) {
+        return new PreReleaseProjectDetails(delegate.getDetails(dependency))
+    }
+
+    @Override
+    ProjectDetailsAware getDetails(Dependency dependency) {
+        return new PreReleaseProjectDetails(delegate.getDetails(dependency))
     }
 }

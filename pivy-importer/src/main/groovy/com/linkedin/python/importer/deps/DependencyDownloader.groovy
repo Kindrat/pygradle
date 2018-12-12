@@ -15,56 +15,27 @@
  */
 package com.linkedin.python.importer.deps
 
-import com.linkedin.python.importer.PypiClient
-import com.linkedin.python.importer.pypi.cache.ApiCache
+
 import groovy.util.logging.Slf4j
 
 @Slf4j
 abstract class DependencyDownloader implements Downloader {
-    Queue<String> dependencies = [] as Queue
-    PypiClient pypiClient = new PypiClient()
-    String project
-    File ivyRepoRoot
-    DependencySubstitution dependencySubstitution
-    Set<String> processedDependencies
-    ApiCache cache
+    final String project
 
-    protected DependencyDownloader(
-        String project,
-        File ivyRepoRoot,
-        DependencySubstitution dependencySubstitution,
-        Set<String> processedDependencies,
-        ApiCache cache) {
-
-        this.project = project
-        this.ivyRepoRoot = ivyRepoRoot
-        this.dependencySubstitution = dependencySubstitution
-        this.processedDependencies = processedDependencies
-        this.cache = cache
-        dependencies.add(project)
+    protected DependencyDownloader(String dependency) {
+        this.project = dependency
     }
 
     @Override
-    void download(boolean latestVersions, boolean allowPreReleases, boolean fetchExtras) {
-        while (!dependencies.isEmpty()) {
-            def dependency = dependencies.poll()
-            if (dependency in processedDependencies) {
-                continue
-            }
-            downloadDependency(dependency, latestVersions, allowPreReleases, fetchExtras)
-            processedDependencies.add(dependency)
-        }
+    String dependency() {
+        return project
     }
-
-    @Override
-    abstract void downloadDependency(String dep, boolean latestVersions, boolean allowPreReleases, boolean fetchExtras)
-
 /**
- * Get the actual module name from artifact name, which has the correct letter case.
- * @param filename the filename of artifact
- * @param revision module version
- * @return actual module name, which is from PyPI
- */
+     * Get the actual module name from artifact name, which has the correct letter case.
+     * @param filename the filename of artifact
+     * @param revision module version
+     * @return actual module name, which is from PyPI
+     */
     static String getActualModuleNameFromFilename(String filename, String revision) {
         return filename.substring(0, filename.indexOf(revision) - 1)
     }

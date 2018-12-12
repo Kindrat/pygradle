@@ -27,19 +27,19 @@ abstract class PythonPackage {
     protected final String moduleName
     protected final String version
     protected final File packageFile
-    protected final ApiCache pypiApiCache
-    protected final DependencySubstitution dependencySubstitution
+    protected final ApiCache cache
+    protected final DependencySubstitution replacements
 
     protected PythonPackage(
         String moduleName,
         String version,
         File packageFile,
-        ApiCache pypiApiCache,
-        DependencySubstitution dependencySubstitution) {
+        ApiCache cache,
+        DependencySubstitution replacements) {
         this.moduleName = moduleName
         this.version = version
-        this.dependencySubstitution = dependencySubstitution
-        this.pypiApiCache = pypiApiCache
+        this.replacements = replacements
+        this.cache = cache
         this.packageFile = packageFile
     }
 
@@ -138,30 +138,23 @@ abstract class PythonPackage {
             }
         }
 
-        def projectDetails = pypiApiCache.getDetails(moduleName)
-
-        // project name is illegal, which means we can't find any information about this project on PyPI
-        if (projectDetails == null) {
-            return null
-        }
-
+        def projectDetails = cache.getDetails(moduleName)
         String name = projectDetails.getName()
         String version
-        if (range.startVersion == '' && range.endVersion == '') {
+        if (range.isEmpty()) {
             // No specific version requested. Get the latest stable.
             if (allowPreReleases) {
                 version = projectDetails.getLatestVersion()
             } else {
                 range.endVersion = projectDetails.getLatestVersion()
-                version = projectDetails.getHighestVersionInRange(range, excluded)
+                version = projectDetails.getVersionInRange(range, excluded).last()
             }
-        } else if (latestVersions) {
-            version = projectDetails.getHighestVersionInRange(range, excluded)
         } else {
-            version = projectDetails.getLowestVersionInRange(range, excluded)
+            def versionsInRange = projectDetails.getVersionInRange(range, excluded)
+            version = latestVersions ? versionsInRange.last() : versionsInRange.first()
         }
 
-        (name, version) = dependencySubstitution.maybeReplace(name + ':' + version).split(':')
+        (name, version) = replacements.maybeReplace(name + ':' + version).split(':')
         version = projectDetails.maybeFixVersion(version)
 
         return name + ':' + version

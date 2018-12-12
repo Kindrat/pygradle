@@ -15,12 +15,18 @@
  */
 package com.linkedin.python.importer.pypi
 
-import groovy.transform.TupleConstructor
+import com.linkedin.python.importer.deps.DependencyType
 
-@TupleConstructor
 class VersionEntry {
-
     String url
-    String packageType
+    DependencyType packageType
     String filename
+    String version
+
+    VersionEntry(String url, DependencyType packageType, String filename, String version) {
+        this.url = url
+        this.packageType = packageType
+        this.filename = filename
+        this.version = version
+    }
 }

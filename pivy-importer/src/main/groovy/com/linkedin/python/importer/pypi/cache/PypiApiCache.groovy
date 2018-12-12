@@ -15,29 +15,41 @@
  */
 package com.linkedin.python.importer.pypi.cache
 
-import com.linkedin.python.importer.PypiClient
-import com.linkedin.python.importer.pypi.ProjectDetails
-import com.linkedin.python.importer.pypi.ProjectDetailsAware
+import com.linkedin.python.importer.deps.Dependency
+import com.linkedin.python.importer.pypi.details.ProjectDetails
+import com.linkedin.python.importer.pypi.details.ProjectDetailsAware
+import com.linkedin.python.importer.pypi.client.Client
 import groovy.util.logging.Slf4j
 import org.apache.http.client.HttpResponseException
 
 @Slf4j
 class PypiApiCache implements ApiCache {
-    final PypiClient pypiClient
-    Map<String, ProjectDetails> cache = [:].withDefault { String name ->
-        new ProjectDetails(pypiClient.downloadMetadata(name))
+    final Client pypiClient
+    Map<String, ProjectDetails> cache = [:].withDefault { String dependency ->
+        pypiClient.downloadMetadata(dependency)
     }
 
-    PypiApiCache(PypiClient pypiClient) {
+    PypiApiCache(Client pypiClient) {
         this.pypiClient = pypiClient
     }
 
-    ProjectDetailsAware getDetails(String project) {
+    ProjectDetailsAware getDetails(String dependency) {
         try {
-            return cache.get(project)
+            return cache.get(dependency)
         } catch (HttpResponseException httpResponseException) {
-            String msg = "Package ${project} has an illegal module name, " +
-                "we are not able to find it on PyPI (https://pypi.org/pypi/$project/json)"
+            String msg = "Package ${dependency} has an illegal module name, " +
+                "we are not able to find it on PyPI (https://pypi.org/pypi/$dependency/json)"
+            throw new IllegalArgumentException("$msg. ${httpResponseException.message}")
+        }
+    }
+
+    @Override
+    ProjectDetailsAware getDetails(Dependency dependency) {
+        try {
+            return cache.get(dependency.moduleName)
+        } catch (HttpResponseException httpResponseException) {
+            String msg = "Package ${dependency} has an illegal module name, " +
+                "we are not able to find it on PyPI (https://pypi.org/pypi/$dependency.moduleName/json)"
             throw new IllegalArgumentException("$msg. ${httpResponseException.message}")
         }
     }

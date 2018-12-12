@@ -15,7 +15,7 @@
  */
 package com.linkedin.python.importer.deps
 
-import com.linkedin.python.importer.PypiClient
+import com.linkedin.python.importer.pypi.client.PypiClient
 import com.linkedin.python.importer.pypi.cache.ApiCache
 import com.linkedin.python.importer.pypi.cache.PypiApiCache
 import groovy.transform.InheritConstructors
@@ -26,7 +26,8 @@ import spock.lang.Specification
 @InheritConstructors
 class TestDependencyDownloader extends DependencyDownloader {
     @Override
-    void downloadDependency(String dep, boolean latestVersions, boolean allowPreReleases, boolean fetchExtras) {
+    List<String> download(boolean latestVersions, boolean allowPreReleases, boolean fetchExtras) {
+        return Collections.emptyList()
     }
 }
 
@@ -41,19 +42,10 @@ class DependencyDownloaderTest extends Specification {
     def "constructor adds project to dependencies set"() {
         given:
         String testProject = "targetProject:1.1.1"
-        DependencySubstitution testDependencySubstitution = new DependencySubstitution([:], [:])
-        Set<String> testProcessedDependencies = new HashSet<>()
-        PypiClient client = new PypiClient()
-        ApiCache cache = new PypiApiCache(client)
 
         when:
         TestDependencyDownloader dependencyDownloader =
-            new TestDependencyDownloader(
-                testProject,
-                testIvyRepoRoot,
-                testDependencySubstitution,
-                testProcessedDependencies,
-                cache)
+            new TestDependencyDownloader(testProject)
 
         then:
         assert dependencyDownloader.dependencies.contains(testProject)
@@ -72,11 +64,7 @@ class DependencyDownloaderTest extends Specification {
         boolean testFetchExtras = false
         TestDependencyDownloader dependencyDownloader =
             new TestDependencyDownloader(
-                testProject,
-                testIvyRepoRoot,
-                testDependencySubstitution,
-                testProcessedDependencies,
-                cache
+                testProject
             )
 
         when:

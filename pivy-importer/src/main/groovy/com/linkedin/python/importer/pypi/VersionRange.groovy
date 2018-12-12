@@ -29,6 +29,10 @@ class VersionRange {
         this.includeEnd = includeEnd
     }
 
+    boolean isEmpty() {
+        return startVersion == '' && endVersion == ''
+    }
+
     private static List<Integer> numericVersion(String release) {
         def v = []
         for (String s : release.split(/\./)) {
@@ -75,5 +79,4 @@ class VersionRange {
         }
         return (v1[i] < 0) ? -1 : 1
     }
-
 }

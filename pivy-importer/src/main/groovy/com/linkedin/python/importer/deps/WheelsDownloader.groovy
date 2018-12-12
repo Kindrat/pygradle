@@ -15,22 +15,28 @@
  */
 package com.linkedin.python.importer.deps
 
-import com.linkedin.python.importer.ImporterCLI
-import com.linkedin.python.importer.distribution.WheelsPackage
-import com.linkedin.python.importer.ivy.IvyFileWriter
+import com.linkedin.python.importer.distribution.PackageFactory
+import com.linkedin.python.importer.ivy.IvyRepo
 import com.linkedin.python.importer.pypi.cache.ApiCache
+import com.linkedin.python.importer.pypi.client.Client
 import groovy.util.logging.Slf4j
 
-import java.nio.file.Paths
+import static com.linkedin.python.importer.deps.DependencyType.WHEEL
 
 @Slf4j
 class WheelsDownloader extends DependencyDownloader {
-    static final String BINARY_DIST_PACKAGE_TYPE = "bdist_wheel"
-    static final String BINARY_DIST_ORG = "wheel"
+    final Client pypiClient
+    final IvyRepo localIvyRepo
+    private final ApiCache cache
+    private final PackageFactory packageFactory
 
-    WheelsDownloader(String project, File ivyRepoRoot, DependencySubstitution dependencySubstitution,
-                     Set<String> processedDependencies, ApiCache cache) {
-        super(project, ivyRepoRoot, dependencySubstitution, processedDependencies, cache)
+    WheelsDownloader(String project, IvyRepo localIvyRepo, ApiCache cache, Client pypiClient,
+                     PackageFactory packageFactory) {
+        super(project)
+        this.packageFactory = packageFactory
+        this.cache = cache
+        this.localIvyRepo = localIvyRepo
+        this.pypiClient = pypiClient
     }
 
     /**
@@ -39,54 +45,29 @@ class WheelsDownloader extends DependencyDownloader {
      * @param name
      * @return
      */
-    static String translateNameToWheelFormat(String name) {
-        return name.replaceAll("-", "_")
-    }
 
     @Override
-    void downloadDependency(String dep, boolean latestVersions, boolean allowPreReleases, boolean fetchExtras) {
-
-        def (String name, String version, String classifier) = dep.split(":")
-
-        name = translateNameToWheelFormat(name)
-        def projectDetails = cache.getDetails(name)
-        if (projectDetails == null) {
-            throw new RuntimeException("$dep name is illegal, can't find any information about this project on PyPI")
-        }
-
-        version = projectDetails.maybeFixVersion(version)
-        def wheelDetails = projectDetails
-            .findVersion(version)
-            .find { it.filename.equalsIgnoreCase("${name}-${version}-${classifier}.whl") }
-
-        if (wheelDetails == null) {
-            throw new RuntimeException("Unable to find wheels for $dep")
-        }
+    List<String> download(boolean latestVersions, boolean allowPreReleases, boolean fetchExtras) {
+        def dependency = Dependency.parseFrom(project)
+        def projectDetails = cache.getDetails(dependency)
+        def matchingVersion = projectDetails.findVersion(dependency)
 
         // make sure the module name has the same letter case as PyPI
-        name = getActualModuleNameFromFilename(wheelDetails.filename, version)
-        log.info("Pulling in $name:$version:$classifier")
+        def name = getActualModuleNameFromFilename(matchingVersion.filename, matchingVersion.version)
+        log.info("Pulling in $dependency")
 
-        def destDir = Paths.get(ivyRepoRoot.absolutePath, BINARY_DIST_ORG, name, version, classifier).toFile()
-        destDir.mkdirs()
+        def destDir = localIvyRepo.acquireArtifactDirectory(dependency)
+        def artifact = pypiClient.downloadArtifact(destDir, matchingVersion.url)
 
-        def wheelArtifact = pypiClient.downloadArtifact(destDir, wheelDetails.url)
-        def packageDependencies = new WheelsPackage(name, version, wheelArtifact, cache, dependencySubstitution)
+        def packageDependencies = packageFactory.createPackage(WHEEL, name, matchingVersion.version, artifact)
             .getDependencies(latestVersions, allowPreReleases, fetchExtras)
 
         log.debug("The dependencies of package $project: is ${packageDependencies.toString()}")
-        new IvyFileWriter(name, version, BINARY_DIST_PACKAGE_TYPE, [wheelDetails])
-            .writeIvyFile(destDir, packageDependencies, classifier)
 
-        packageDependencies.each { key, value ->
-            List<String> sdistDependencies = value
-            for (String sdist : sdistDependencies) {
-                DependencyDownloader sdistDownloader = new SdistDownloader(
-                    sdist, ivyRepoRoot, dependencySubstitution, processedDependencies, cache)
+        localIvyRepo.writeIvyMetadata(dependency, matchingVersion, packageDependencies)
 
-                ImporterCLI.pullDownPackageAndDependencies(
-                    processedDependencies, sdistDownloader, latestVersions, allowPreReleases, fetchExtras)
-            }
-        }
+        List<String> dependencies = new ArrayList<>()
+        packageDependencies.values().each { list -> dependencies.addAll(list) }
+        return dependencies
     }
 }
