@@ -16,15 +16,16 @@
 package com.linkedin.python.importer.deps
 
 import com.linkedin.python.importer.distribution.PackageFactory
-import com.linkedin.python.importer.distribution.SourceDistPackage
-import com.linkedin.python.importer.ivy.IvyFileWriter
 import com.linkedin.python.importer.ivy.IvyRepo
 import com.linkedin.python.importer.pypi.cache.ApiCache
 import com.linkedin.python.importer.pypi.client.Client
 import groovy.util.logging.Slf4j
 
+import java.nio.file.Paths
+
 import static com.linkedin.python.importer.deps.Dependency.parseFrom
-import static com.linkedin.python.importer.deps.DependencyType.*
+import static com.linkedin.python.importer.deps.DependencyType.SOURCE_DISTRIBUTION
+import static org.apache.commons.io.FileUtils.copyFile
 
 @Slf4j
 class SdistDownloader extends DependencyDownloader {
@@ -52,7 +53,8 @@ class SdistDownloader extends DependencyDownloader {
         log.info("Pulling in $dependency")
 
         def destDir = localIvyRepo.acquireArtifactDirectory(dependency)
-        def artifact = pypiClient.downloadArtifact(destDir, matchingVersion.url)
+        def artifact = pypiClient.downloadArtifact(matchingVersion.url)
+        copyFile(artifact, Paths.get(destDir.getAbsolutePath(), normalizeName(artifact.getName())).toFile())
 
         def packageDependencies = packageFactory.createPackage(SOURCE_DISTRIBUTION, name, matchingVersion.version, artifact)
             .getDependencies(latestVersions, allowPreReleases, fetchExtras)
@@ -60,7 +62,11 @@ class SdistDownloader extends DependencyDownloader {
         localIvyRepo.writeIvyMetadata(dependency, matchingVersion, packageDependencies)
 
         List<String> dependencies = new ArrayList<>()
-        packageDependencies.values().each { list -> dependencies.addAll(list)}
+        packageDependencies.values().each { list -> dependencies.addAll(list) }
         return dependencies
+    }
+
+    String normalizeName(String name) {
+        return name.replaceAll("_", "-")
     }
 }

@@ -22,6 +22,8 @@ import com.linkedin.python.importer.pypi.client.Client
 import groovy.util.logging.Slf4j
 
 import static com.linkedin.python.importer.deps.DependencyType.WHEEL
+import static org.apache.commons.io.FileUtils.copyFileToDirectory
+import static org.apache.commons.io.FileUtils.moveDirectory
 
 @Slf4j
 class WheelsDownloader extends DependencyDownloader {
@@ -57,7 +59,8 @@ class WheelsDownloader extends DependencyDownloader {
         log.info("Pulling in $dependency")
 
         def destDir = localIvyRepo.acquireArtifactDirectory(dependency)
-        def artifact = pypiClient.downloadArtifact(destDir, matchingVersion.url)
+        def artifact = pypiClient.downloadArtifact(matchingVersion.url)
+        copyFileToDirectory(artifact, destDir)
 
         def packageDependencies = packageFactory.createPackage(WHEEL, name, matchingVersion.version, artifact)
             .getDependencies(latestVersions, allowPreReleases, fetchExtras)

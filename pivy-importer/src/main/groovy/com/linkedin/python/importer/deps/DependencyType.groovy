@@ -2,16 +2,10 @@ package com.linkedin.python.importer.deps
 
 enum DependencyType {
     SOURCE_DISTRIBUTION("sdist", "pypi"),
-    WHEEL("bdist_wheel", "wheel") {
-        @Override
-        String normalizeName(String name) {
-            return name.replaceAll("-", "_")
-        }
-    },
+    WHEEL("bdist_wheel", "wheel"),
     WININST("bdist_wininst", "wininst"),
     EGG("bdist_egg", "egg"),
     RPM("bdist_rpm", "rpm")
-
 
     final String pythonType
     final String org
@@ -21,16 +15,15 @@ enum DependencyType {
         this.org = org
     }
 
-    String normalizeName(String name) {
-        return name
-    }
-
     static DependencyType forFile(File artifact) {
         def name = artifact.name
         if (name.endsWith("whl")) {
             return WHEEL
         }
-        return SOURCE_DISTRIBUTION
+        if (name.contains(".tar.") || name.endsWith(".tgz") || name.endsWith(".zip")) {
+            return SOURCE_DISTRIBUTION
+        }
+        throw new RuntimeException("Unsupported dist type for $name")
     }
 
     static DependencyType forPythonType(String type) {

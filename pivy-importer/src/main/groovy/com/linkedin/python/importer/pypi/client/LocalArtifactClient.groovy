@@ -5,9 +5,6 @@ import com.linkedin.python.importer.pypi.VersionEntry
 import com.linkedin.python.importer.pypi.details.ProjectDetails
 import com.linkedin.python.importer.pypi.details.ProjectDetailsAware
 import groovy.util.logging.Slf4j
-import org.apache.commons.io.FileUtils
-
-import java.nio.file.Paths
 
 @Slf4j
 class LocalArtifactClient implements Client {
@@ -20,15 +17,12 @@ class LocalArtifactClient implements Client {
     }
 
     @Override
-    File downloadArtifact(File destDir, String url) {
-        try {
-            def file = new File(url)
-            FileUtils.copyFileToDirectory(file, destDir)
-            return Paths.get(destDir.getAbsolutePath(), file.getName()).toFile()
-        } catch (Exception e) {
-            log.debug("Url $url is not in local filesystem : $e.message")
-            return delegate.downloadArtifact(destDir, url)
+    File downloadArtifact(String url) {
+        def file = new File(url)
+        if (file.exists()) {
+            return file
         }
+        return delegate.downloadArtifact(url)
     }
 
     @Override

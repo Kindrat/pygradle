@@ -22,6 +22,7 @@ import com.linkedin.python.importer.pypi.details.ProjectDetailsAware
 import com.linkedin.python.importer.util.ProxyDetector
 import groovy.json.JsonSlurper
 import groovy.util.logging.Slf4j
+import org.apache.commons.io.FileUtils
 import org.apache.commons.io.FilenameUtils
 import org.apache.http.client.fluent.Request
 
@@ -31,9 +32,9 @@ import static java.util.Collections.unmodifiableMap
 class PypiClient implements Client{
 
     @Override
-    File downloadArtifact(File destDir, String url) {
+    File downloadArtifact(String url) {
         def filename = FilenameUtils.getName(new URL(url).getPath())
-        def contents = new File(destDir, filename)
+        def contents = new File(FileUtils.getTempDirectory(), filename)
 
         if (!contents.exists()) {
             def proxy = ProxyDetector.maybeGetHttpProxy()
